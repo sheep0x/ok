@@ -12,6 +12,8 @@ from basetest import BaseTestCase #pylint: disable=relative-import
 from app.api import API_PREFIX
 from app import models, constants
 
+import io
+
 def _dict_unicode(obj):
     if isinstance(obj, dict):
         return {unicode(key): value for
@@ -61,35 +63,39 @@ class APITest(object): #pylint: disable=no-init
         """
         self.get('/{}/{}'.format(self.name, inst.key.id()), *args, **kwds)
 
-    def post(self, url, *args, **kwds):
+    def post(self, url, **kwds):
         """
         Utility method to do a post request, with json
         """
         kwds.setdefault('content_type', 'application/json')
-        self.response = self.client.post(API_PREFIX + url, *args, **kwds)
+        print kwds
+        self.response = self.client.post(API_PREFIX + url, **kwds)
         try:
             self.response_json = models.json.loads(self.response.data)
-        except e:
+        except Exception as e:
             self.response_json = None
 
-    def post_json(self, url, *args, **kwds):
+    def post_json(self, url, **kwds):
         """
         Utility method for posting JSON
         """
-        data = kwds.get('data', {})
+        data = kwds.pop('model', {})
         if isinstance(data, models.Base):
             data = data.to_dict()
-        if isinstance(data, dict):
+
+        if 'file' in kwds:
+            data['file'] = kwds.pop('file')
+        else:
             data = models.json.dumps(data)
         kwds['data'] = data
         kwds.setdefault('content_type', 'application/json')
-        self.post(url, *args, **kwds)
+        self.post(url, **kwds)
 
     def post_entity(self, inst, *args, **kwds):
         """
         Posts an entity to the server
         """
-        self.post_json('/{}/new'.format(self.name), data=inst, *args, **kwds)
+        self.post_json('/{}/new'.format(self.name), model=inst, **kwds)
         if inst.key:
             if self.response_json.get('key'):
                 self.assertEqual(inst.key.id(), self.response_json['key'])
@@ -229,7 +235,7 @@ class SubmissionAPITest(APITest, BaseTestCase):
         """
         data = inst.to_dict()
         data['project_name'] = kwds.pop('project_name', self.project_name)
-        self.post_json('/{}/new'.format(self.name), data=data, *args, **kwds)
+        self.post_json('/{}/new'.format(self.name), model=data, *args, **kwds)
         if inst.key:
             if self.response_json.get('key'):
                 self.assertEqual(inst.key.id(), self.response_json['key'])
@@ -241,6 +247,18 @@ class SubmissionAPITest(APITest, BaseTestCase):
         self.post_entity(self.inst)
 
         self.assertStatusCode(422)
+
+    def test_file_upload(self):
+        self.client.open(method='POST', data={'foo': 'this is some text',
+           'file': (io.BytesIO(b'my file contents'), 'test.txt')})
+        # self.post_json('/{}/new'.format(self.name),
+         #       file=(io.BytesIO(b'test file'), 'file.txt'))
+        # print self.response
+        data = self.inst.to_dict()
+        data['upload_var'] = (io.BytesIO(b'my file contents'), 'test.txt')
+        print data
+        self.client.post('/api/v1/submissions/new', data=data)
+        print self.response.data
 
 if __name__ == '__main__':
     unittest.main()

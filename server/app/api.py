@@ -99,7 +99,10 @@ class SubmissionAPI(MethodView, APIResource):
         return models.Submission
 
     def post(self):
-        post_dict = request.json
+        print 'req', request.data
+        print request.form
+        print request.files
+        post_dict = request.form
 
         project_name = post_dict.pop('project_name', None)
         project = list(models.Assignment.query().filter(
