@@ -125,11 +125,23 @@ class SubmitNDBImplementation:
         submission.put()
         return submission
 
+class AutograderTaskQueueImplementation:
+    """Implementation of the autograder using the GAE Task Queue"""
+
+    def new_submission(self, submission):
+        """Adds a new submission to the queue."""
+        q = taskqueue.Queue(constants.AUTOGRADER_TASK_QUEUE)
+        tasks = []
+        tasks.append(taskqueue.Task(payload=submission.key.id(), method='PULL'))
+        q.add(tasks)
+        return None
+
 
 class SubmissionAPI(MethodView, APIResource):
     """The API resource for the Submission Object"""
     name = "Submission"
     db = SubmitNDBImplementation()
+    autograder = AutograderTaskQueueImplementation()
     post_fields = ['assignment', 'messages']
 
     @classmethod
@@ -149,6 +161,9 @@ class SubmissionAPI(MethodView, APIResource):
         """Process submission messages for an assignment from a user."""
         valid_assignment = self.get_assignment(assignment)
         submission = self.db.create_submission(user, valid_assignment, messages)
+        result = self.autograder.new_submission(submission)
+        if result:
+            return create_api_response(500, "failure", result)
         return create_api_response(200, "success", {
             'key': submission.key.id()
         })
