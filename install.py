@@ -81,7 +81,10 @@ def setup_envs():
     client, server = [os.path.join(ENV_DIR, d) for d in ('client', 'server')]
     for env_path, python in [(client, 'python3'), (server, 'python')]:
         if not os.path.exists(os.path.join(env_path, 'bin')):
-            shell('virtualenv', '-p', which(python), env_path)
+            virtualenv = 'virtualenv'
+            if not which(virtualenv):
+                virtualenv = 'python3 -m venv'
+            shell(virtualenv, '-p', which(python), env_path)
     print('Virtual environments are created')
 
 def run_linkenv():
