@@ -164,7 +164,7 @@ class APIResource(object):
             query = query.order(-created_prop)
 
         cursor = request.args.get('cursor', None)
-        num_page = request.args.get('num_page', None)
+        num_page = request.args.get('num_page', 40)
         query_results = paginate(query, cursor, num_page)
         return create_api_response(200, "success", query_results)
 

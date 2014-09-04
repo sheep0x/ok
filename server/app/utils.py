@@ -9,6 +9,7 @@ import zipfile as zf
 from flask import jsonify, request, Response, json
 
 from google.appengine.datastore.datastore_query import Cursor
+from google.appengine.ext import ndb
 
 #TODO(martinis) somehow having data be an empty list doesn't make it
 # return an empty list, but an empty object.
@@ -34,7 +35,7 @@ def create_zip(obj):
     zip_string = zipfile_str.getvalue()
     return zip_string
 
-def paginate(entries, cursor, num_per_page):
+def paginate(entries, curs, num_per_page):
     """
     Support pagination for an NDB query.
     Arguments:
@@ -53,22 +54,23 @@ def paginate(entries, cursor, num_per_page):
     https://developers.google.com/appengine/docs/python/ndb/queryclass#Query_fetch_page
     """
     if num_per_page is None:
-        result = entries.fetch(), None, False
+        return {
+            'results': entries.fetch(),
+            'cursor': None,
+            'more': False,
+        }
+
+    if curs is not None:
+        cursor = Cursor(urlsafe=curs)
+        result = entries.fetch_page(
+            int(num_per_page), start_cursor=cursor)
     else:
-        if cursor is not None:
-            cursor = Cursor(urlsafe=cursor)
-            results, forward_curs, more = entries.fetch_page(
-                int(num_per_page), start_cursor=cursor)
-        else:
-            results, forward_curs, more = entries.fetch_page(int(num_per_page))
-        if forward_curs is not None:
-            result = results, forward_curs.urlsafe(), more
-        else:
-            result = results, None, more
-    results, urlsafe, more = result
+        result = entries.fetch_page(int(num_per_page))
+
+    results, cursor, more = result
     return {
         'results': results,
-        'cursor': urlsafe,
+        'cursor': cursor.urlsafe() if cursor else None,
         'more': more
     }
 

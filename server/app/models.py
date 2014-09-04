@@ -33,8 +33,10 @@ class JSONEncoder(old_json):
         elif isinstance(obj, datetime.datetime):
             obj = convert_timezone(obj)
             return str(obj)
-        if isinstance(obj, ndb.Model):
+        elif isinstance(obj, ndb.Model):
             return obj.to_json()
+        elif isinstance(obj, ndb.Future):
+            return obj.get_result()
         return super(JSONEncoder, self).default(obj)
 
 
@@ -62,8 +64,7 @@ class Base(ndb.Model):
             result['id'] = self.key.id()
         for key, value in result.items():
             try:
-                new_value = app.json_encoder().default(value)
-                result[key] = new_value
+                result[key] = app.json_encoder().default(value)
             except TypeError:
                 pass
         return result
