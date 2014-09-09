@@ -125,6 +125,7 @@ app.controller("SubmissionListCtrl", ['$scope', 'Submission',
   $scope.currentPage = 1;
 
   $scope.refresh = function(page) {
+    $scope.refreshing = true;
     Submission.query({
       fields: {
         'created': true,
@@ -140,6 +141,7 @@ app.controller("SubmissionListCtrl", ['$scope', 'Submission',
       page: page,
       num_page: $scope.itemsPerPage
     }, function(response) {
+      $scope.refreshing = false;
       $scope.data = response.data;
       $scope.message = response.message;
       $scope.totalItems = response.data.statistics.total;
@@ -151,7 +153,9 @@ app.controller("SubmissionListCtrl", ['$scope', 'Submission',
   }
   $scope.pageChanged = function() {
     console.log("changed")
-    $scope.refresh($scope.currentPage);
+    if (!$scope.refreshing) {
+      $scope.refresh($scope.currentPage);
+    }
   }
   $scope.refresh(1);
   }]);
