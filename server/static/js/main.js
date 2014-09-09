@@ -147,12 +147,11 @@ app.controller("SubmissionListCtrl", ['$scope', 'Submission',
       $scope.totalItems = response.data.statistics.total;
       if (response.data.page !== $scope.currentPage) {
         $scope.currentPage = response.data.page;
-        $scope.pageChange();
+        $scope.pageChanged();
       }
     });
   }
   $scope.pageChanged = function() {
-    console.log("changed")
     if (!$scope.refreshing) {
       $scope.refresh($scope.currentPage);
     }
